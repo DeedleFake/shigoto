@@ -3,14 +3,12 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
-	"text/template"
 
 	"github.com/DeedleFake/sub"
 	"github.com/go-yaml/yaml"
@@ -42,45 +40,6 @@ func readMeta(r io.ReadCloser, v interface{}) (rem io.Reader, err error) {
 
 	err = yaml.Unmarshal(buf, v)
 	return br, err
-}
-
-type tmpl struct {
-	tmpl *template.Template
-
-	Path string `yaml:"path"`
-}
-
-func loadTmpl() (map[string]tmpl, error) {
-	root, ok := getRoot()
-	if !ok {
-		return nil, errors.New("couldn't find root of project")
-	}
-	root = filepath.Join(root, "tmpl")
-
-	tmpls := make(map[string]tmpl)
-	err := walk(root, func(path string, fi os.FileInfo) error {
-		if fi.IsDir() {
-			return nil
-		}
-
-		f, err := os.Open(filepath.Join(root, path))
-		if err != nil {
-			return fmt.Errorf("failed to open %q: %v", path, err)
-		}
-		defer f.Close()
-
-		var t tmpl
-		rem, err := readMeta(f, &t)
-		if err != nil {
-			return fmt.Errorf("failed to read meta from %q: %v", path, err)
-		}
-		tmpls[path] = t
-
-		io.Copy(os.Stdout, rem)
-
-		return nil
-	})
-	return tmpls, err
 }
 
 func getRoot() (string, bool) {

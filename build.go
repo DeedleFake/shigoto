@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 type buildCmd struct {
@@ -33,8 +34,10 @@ func (cmd *buildCmd) Run(args []string) error {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
 
-	fmt.Printf("%#v\n", tmpl)
-	return nil
+	err = tmpl["index.html"].tmpl.Execute(os.Stdout, map[string]string{
+		"Content": "This is a _test_.",
+	})
+	return err
 
 	//return build(tmpl)
 }
