@@ -135,6 +135,7 @@ or other, similar sources.
 
 	commander.Register(commander.HelpCmd())
 	commander.Register(&buildCmd{})
+	commander.Register(&initCmd{})
 
 	err := commander.Run(append([]string{filepath.Base(os.Args[0])}, os.Args[1:]...))
 	if err != nil {
