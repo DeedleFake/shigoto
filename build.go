@@ -21,7 +21,9 @@ func (cmd *buildCmd) Desc() string {
 func (cmd *buildCmd) Help() string {
 	return `Usage: build [flags]:
 
-	Builds the site, generating static pages to be served.`
+The build command converts the content files in the publish directory
+into static output files using the transformations specified in the
+tmpl directory.`
 }
 
 func (cmd *buildCmd) Flags(fset *flag.FlagSet) {

@@ -25,8 +25,7 @@ func (cmd *initCmd) Help() string {
 	return `Usage: init
 
 The init command creates a basic project structure. It creates the
-necessary directories, as well as a few basic example files.
-`
+necessary directories as well as a few basic example files.`
 }
 
 func (cmd *initCmd) Flags(fset *flag.FlagSet) {
