@@ -28,6 +28,13 @@ func (cmd *buildCmd) Flags(fset *flag.FlagSet) {
 }
 
 func (cmd *buildCmd) Run(args []string) error {
-	fmt.Println("Build isn't implemented yet.")
+	tmpl, err := loadTmpl()
+	if err != nil {
+		return fmt.Errorf("failed to load templates: %v", err)
+	}
+
+	fmt.Printf("%#v\n", tmpl)
 	return nil
+
+	//return build(tmpl)
 }
