@@ -22,11 +22,13 @@ var standardFuncs = map[string]interface{}{
 	"slug": slug.Make,
 }
 
+var defaults = map[string]interface{}{
+	"sourceName": `{{.Title | slug}}.md`,
+}
+
 type tmpl struct {
 	tmpl *template.Template
-
-	Path       string `yaml:"path"`
-	SourceName string `yaml:"sourceName"`
+	meta map[string]interface{}
 }
 
 func loadTmpl(root string) (map[string]tmpl, error) {
@@ -45,7 +47,7 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 		defer f.Close()
 
 		var t tmpl
-		rem, err := readMeta(f, &t)
+		rem, err := readMeta(f, &t.meta)
 		if err != nil {
 			return fmt.Errorf("failed to read meta from %q: %v", path, err)
 		}
@@ -70,12 +72,12 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 	return tmpls, err
 }
 
-func (t tmpl) getSourceName() string {
-	if t.SourceName == "" {
-		return `{{.Title | slug}}.md`
+func (t tmpl) get(name string) interface{} {
+	sourceName, ok := t.meta[name]
+	if !ok {
+		return defaults[name]
 	}
-
-	return t.SourceName
+	return sourceName
 }
 
 func metaTmpl(src string, data interface{}) (string, error) {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -55,15 +56,33 @@ func (cmd *initCmd) Run(args []string) error {
 
 		{
 			path: "tmpl/index.html",
-			content: `<!DOCTYPE html>
+			content: `siteTitle: ` + strconv.Quote(cmd.title) + `
+
+++++++++++
+
+<!DOCTYPE html>
 <html>
 	<head>
-		<title>` + cmd.title + `</title>
+		<title>{{.Tmpl.siteTitle}}</title>
 	</head>
 	<body>
-		{{.Content | markdown}}
+		<h2>{{.Meta.title}}</h2>
+		<main>
+			{{.Content}}
+		</main>
 	</body>
 </html>`,
+		},
+
+		{
+			path: "tmpl/page.html",
+			content: `inherit: "index.html"
+
+++++++++++
+
+<article>
+	{{.Content | markdown}}
+</article>`,
 		},
 	}
 

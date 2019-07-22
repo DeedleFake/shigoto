@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -71,9 +72,14 @@ func (cmd *draftCmd) Run(args []string) error {
 		return fmt.Errorf("unknown type %q", dtype)
 	}
 
-	name, err := metaTmpl(t.getSourceName(), map[string]interface{}{
+	sourceName, ok := t.get("sourceName").(string)
+	if !ok {
+		return errors.New("sourceName is not a string")
+	}
+
+	name, err := metaTmpl(sourceName, map[string]interface{}{
 		"Title": title,
-		"Tmpl":  t,
+		"Tmpl":  t.meta,
 	})
 	if err != nil {
 		return err
