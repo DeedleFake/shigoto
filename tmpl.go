@@ -9,13 +9,24 @@ import (
 	"text/template"
 	"unsafe"
 
+	"github.com/gosimple/slug"
 	"github.com/russross/blackfriday"
 )
+
+var standardFuncs = map[string]interface{}{
+	"markdown": func(str string) string {
+		out := blackfriday.Run([]byte(str))
+		return *(*string)(unsafe.Pointer(&out))
+	},
+
+	"slug": slug.Make,
+}
 
 type tmpl struct {
 	tmpl *template.Template
 
-	Path string `yaml:"path"`
+	Path       string `yaml:"path"`
+	SourceName string `yaml:"sourceName"`
 }
 
 func loadTmpl(root string) (map[string]tmpl, error) {
@@ -59,9 +70,21 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 	return tmpls, err
 }
 
-var standardFuncs = map[string]interface{}{
-	"markdown": func(str string) string {
-		out := blackfriday.Run([]byte(str))
-		return *(*string)(unsafe.Pointer(&out))
-	},
+func (t tmpl) getSourceName() string {
+	if t.SourceName == "" {
+		return `{{.Title | slug}}.md`
+	}
+
+	return t.SourceName
+}
+
+func metaTmpl(src string, data interface{}) (string, error) {
+	snt, err := template.New(src).Funcs(standardFuncs).Parse(src)
+	if err != nil {
+		return "", err
+	}
+
+	var r strings.Builder
+	err = snt.Execute(&r, data)
+	return r.String(), err
 }
