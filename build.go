@@ -3,6 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"text/template"
 )
 
 type buildCmd struct {
@@ -35,72 +40,153 @@ func (cmd *buildCmd) Run(args []string) error {
 		return noRootErr
 	}
 
-	//publish := filepath.Join(root, "publish")
-	//output := filepath.Join(root, cmd.output)
+	publish := filepath.Join(root, "publish")
+	output := filepath.Join(root, cmd.output)
 
 	tmpl, err := loadTmpl(root)
 	if err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
 
-	for t, tmpl := range tmpl {
-		fmt.Printf("%v: %#v\n", t, tmpl)
+	err = copyStatic(output, filepath.Join(root, "static"))
+	if err != nil {
+		return err
 	}
-	return nil
 
-	//var meta map[string]interface{}
-	//return walk(publish, func(p string, fi os.FileInfo) error {
-	//	if fi.IsDir() {
-	//		return nil
-	//	}
+	return walk(publish, func(p string, fi os.FileInfo) error {
+		if fi.IsDir() {
+			return nil
+		}
 
-	//	in, err := os.Open(filepath.Join(publish, p))
-	//	if err != nil {
-	//		return fmt.Errorf("failed to open %q: %v", p, err)
-	//	}
-	//	defer in.Close()
+		in, err := os.Open(filepath.Join(publish, p))
+		if err != nil {
+			return fmt.Errorf("failed to open %q: %v", p, err)
+		}
+		defer in.Close()
 
-	//	meta = make(map[string]interface{}, len(meta))
-	//	inr, err := readMeta(in, &meta)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to load meta from %q: %v", p, err)
-	//	}
+		var meta map[string]interface{}
+		inr, err := readMeta(in, &meta)
+		if err != nil {
+			return fmt.Errorf("failed to load meta from %q: %v", p, err)
+		}
 
-	//	tmplType, ok := meta["type"].(string)
-	//	if !ok {
-	//		return fmt.Errorf("no type in %q", p)
-	//	}
+		var instr strings.Builder
+		_, err = io.Copy(&instr, inr)
+		if err != nil {
+			return fmt.Errorf("failed to read %q: %v", p, err)
+		}
 
-	//	t, ok := tmpl[tmplType]
-	//	if !ok {
-	//		return fmt.Errorf("unknown type %q in %q", tmplType, p)
-	//	}
+		intmpl, err := template.New(p).Funcs(standardFuncs).Parse(instr.String())
+		if err != nil {
+			return fmt.Errorf("failed to parse %q: %v", p, err)
+		}
 
-	//	var content strings.Builder
-	//	err = t.tmpl.Execute(&content, map[string]interface{}{
-	//		"tmpl": t,
-	//		"meta": meta,
-	//	})
-	//	if err != nil {
-	//		return fmt.Errorf("failed to execute %q: %v", tmplType, err)
-	//	}
+		dtype, ok := meta["type"].(string)
+		if !ok {
+			return fmt.Errorf("no type in %q", p)
+		}
 
-	//	err = os.MkdirAll(filepath.Join(output, filepath.Dir(p)), 0755)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to create directory for %q: %v", p, err)
-	//	}
+		title, _ := meta["title"].(string)
 
-	//	op := strings.TrimSuffix(p, ".md") + filepath.Ext(tmplType)
-	//	out, err := os.OpenFile(
-	//		filepath.Join(output, op),
-	//		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-	//		0644,
-	//	)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to create %q: %v", p, err)
-	//	}
-	//	defer out.Close()
+		t, ok := tmpl[dtype]
+		if !ok {
+			return fmt.Errorf("unknown type %q in %q", dtype, p)
+		}
 
-	//	return nil
-	//})
+		var content strings.Builder
+		err = intmpl.Execute(&content, map[string]interface{}{
+			"Type":  dtype,
+			"Title": title,
+			"Tmpl":  t.meta,
+			"Meta":  meta,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to execute %q: %v", dtype, err)
+		}
+
+		buildPath, ok := t.get("buildPath").(string)
+		if !ok {
+			return fmt.Errorf("buildPath is not a string in %q", dtype)
+		}
+
+		path, err := metaTmpl(buildPath, map[string]interface{}{
+			"Type":  dtype,
+			"Title": title,
+			"Tmpl":  t.meta,
+			"Meta":  meta,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to construct buildPath for %q", p)
+		}
+
+		buildName, ok := t.get("buildName").(string)
+		if !ok {
+			return fmt.Errorf("buildName is not a string in %q", dtype)
+		}
+
+		name, err := metaTmpl(buildName, map[string]interface{}{
+			"Type":  dtype,
+			"Title": title,
+			"Tmpl":  t.meta,
+			"Meta":  meta,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to construct buildName for %q", p)
+		}
+
+		err = os.MkdirAll(filepath.Join(output, path), 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory for %q: %v", p, err)
+		}
+
+		out, err := os.OpenFile(
+			filepath.Join(output, path, name),
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+			0644,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create %q: %v", p, err)
+		}
+		defer out.Close()
+
+		err = t.tmpl.Execute(out, map[string]interface{}{
+			"Type":    dtype,
+			"Title":   title,
+			"Tmpl":    t.meta,
+			"Meta":    meta,
+			"Content": content.String(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to execute %q: %v", p, err)
+		}
+
+		return nil
+	})
+}
+
+func copyStatic(out, in string) error {
+	_, err := os.Stat(in)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "No static directory found.")
+		return nil
+	}
+
+	return walk(in, func(p string, fi os.FileInfo) error {
+		err := os.MkdirAll(filepath.Join(out, filepath.Dir(p)), 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory for %q: %v", p, err)
+		}
+
+		err = os.RemoveAll(filepath.Join(out, p))
+		if err != nil {
+			return fmt.Errorf("failed to remove %q: %v", p, err)
+		}
+
+		err = os.Link(filepath.Join(in, p), filepath.Join(out, p))
+		if err != nil {
+			return fmt.Errorf("failed to copy %q: %v", p, err)
+		}
+
+		return nil
+	})
 }

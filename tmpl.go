@@ -18,6 +18,7 @@ import (
 var defaults = map[string]interface{}{
 	"sourceName": `{{.Title | slug}}.md`,
 	"buildPath":  `{{.Type | trimExt | slug}}`,
+	"buildName":  `{{.Title | slug}}.{{.Type | ext}}`,
 }
 
 var standardFuncs = map[string]interface{}{
@@ -52,6 +53,10 @@ var standardFuncs = map[string]interface{}{
 
 	"trimExt": func(file string) string {
 		return strings.TrimSuffix(file, filepath.Ext(file))
+	},
+
+	"ext": func(file string) string {
+		return strings.TrimPrefix(filepath.Ext(file), ".")
 	},
 }
 
