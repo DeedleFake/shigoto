@@ -14,7 +14,7 @@ func (cmd *buildCmd) Name() string {
 }
 
 func (cmd *buildCmd) Desc() string {
-	return "generate static site"
+	return "builds output"
 }
 
 func (cmd *buildCmd) Help() string {
