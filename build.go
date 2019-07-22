@@ -149,7 +149,7 @@ func (cmd *buildCmd) Run(args []string) error {
 		}
 		defer out.Close()
 
-		err = t.tmpl.Execute(out, map[string]interface{}{
+		err = executeInherit(tmpl, t, out, map[string]interface{}{
 			"Type":    dtype,
 			"Title":   title,
 			"Tmpl":    t.meta,
@@ -189,4 +189,33 @@ func copyStatic(out, in string) error {
 
 		return nil
 	})
+}
+
+func executeInherit(tmpl map[string]tmpl, t tmpl, out io.Writer, data map[string]interface{}) error {
+	inherit, ok := t.meta["inherit"].(string)
+	if !ok {
+		return t.tmpl.Execute(out, data)
+	}
+
+	next, ok := tmpl[inherit]
+	if !ok {
+		return fmt.Errorf("unknown type %q", inherit)
+	}
+
+	var content strings.Builder
+	err := t.tmpl.Execute(&content, data)
+	if err != nil {
+		return err
+	}
+
+	nextData := make(map[string]interface{}, len(data))
+	for k, v := range data {
+		nextData[k] = v
+	}
+	for k, v := range next.meta {
+		nextData["Tmpl"].(map[string]interface{})[k] = v
+	}
+	nextData["Content"] = content.String()
+
+	return executeInherit(tmpl, next, out, nextData)
 }
