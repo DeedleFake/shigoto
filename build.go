@@ -76,7 +76,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			return fmt.Errorf("failed to read %q: %v", p, err)
 		}
 
-		intmpl, err := template.New(p).Funcs(standardFuncs).Parse(instr.String())
+		intmpl, err := template.New(p).Funcs(standardFuncs(tmpl)).Parse(instr.String())
 		if err != nil {
 			return fmt.Errorf("failed to parse %q: %v", p, err)
 		}

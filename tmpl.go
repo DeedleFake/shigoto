@@ -17,47 +17,64 @@ import (
 
 var defaults = map[string]interface{}{
 	"sourceName": `{{.Title | slug}}.md`,
-	"buildPath":  `{{.Type | trimExt | slug}}`,
+	"buildPath":  ``,
 	"buildName":  `{{.Title | slug}}.{{.Type | ext}}`,
 }
 
-var standardFuncs = map[string]interface{}{
-	"markdown": func(str string) string {
-		out := blackfriday.Run([]byte(str))
-		return *(*string)(unsafe.Pointer(&out))
-	},
+func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
+	return template.FuncMap{
+		"markdown": func(str string) string {
+			out := blackfriday.Run([]byte(str))
+			return *(*string)(unsafe.Pointer(&out))
+		},
 
-	"slug": slug.Make,
+		"slug": slug.Make,
 
-	"time": func(t interface{}) (time.Time, error) {
-		switch t := t.(type) {
-		case int:
-			return time.Unix(int64(t), 0), nil
+		"time": func(t interface{}) (time.Time, error) {
+			switch t := t.(type) {
+			case int:
+				return time.Unix(int64(t), 0), nil
 
-		case string:
-			for _, f := range []string{time.ANSIC, time.UnixDate, time.RubyDate, time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123, time.RFC1123Z, time.RFC3339, time.RFC3339Nano, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano} {
-				t, err := time.Parse(f, t)
-				if err != nil {
-					continue
+			case string:
+				for _, f := range []string{time.ANSIC, time.UnixDate, time.RubyDate, time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123, time.RFC1123Z, time.RFC3339, time.RFC3339Nano, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano} {
+					t, err := time.Parse(f, t)
+					if err != nil {
+						continue
+					}
+
+					return t, nil
 				}
 
-				return t, nil
+				return time.Time{}, errors.New("failed to parse time")
+
+			default:
+				return time.Time{}, fmt.Errorf("unexpected time type: %T", t)
+			}
+		},
+
+		"trimExt": func(file string) string {
+			return strings.TrimSuffix(file, filepath.Ext(file))
+		},
+
+		"ext": func(file string) string {
+			return strings.TrimPrefix(filepath.Ext(file), ".")
+		},
+
+		"tmpl": func(name string, data interface{}) (string, error) {
+			if tmpls == nil {
+				return "", errors.New("tmpl is unavailable in this context")
 			}
 
-			return time.Time{}, errors.New("failed to parse time")
+			t, ok := tmpls[name]
+			if !ok {
+				return "", fmt.Errorf("unknown tmpl %q", name)
+			}
 
-		default:
-			return time.Time{}, fmt.Errorf("unexpected time type: %T", t)
-		}
-	},
-
-	"trimExt": func(file string) string {
-		return strings.TrimSuffix(file, filepath.Ext(file))
-	},
-
-	"ext": func(file string) string {
-		return strings.TrimPrefix(filepath.Ext(file), ".")
-	},
+			var out strings.Builder
+			err := t.tmpl.Execute(&out, data)
+			return out.String(), err
+		},
+	}
 }
 
 type tmpl struct {
@@ -93,7 +110,8 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 		}
 
 		t.tmpl = template.New(path)
-		t.tmpl.Funcs(standardFuncs)
+		t.tmpl.Funcs(standardFuncs(tmpls))
+		t.tmpl.Funcs(map[string]interface{}{})
 
 		t.tmpl, err = t.tmpl.Parse(buf.String())
 		if err != nil {
@@ -115,7 +133,7 @@ func (t tmpl) get(name string) interface{} {
 }
 
 func metaTmpl(src string, data interface{}) (string, error) {
-	snt, err := template.New(src).Funcs(standardFuncs).Parse(src)
+	snt, err := template.New(src).Funcs(standardFuncs(nil)).Parse(src)
 	if err != nil {
 		return "", err
 	}
