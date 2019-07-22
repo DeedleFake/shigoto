@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	"github.com/gosimple/slug"
 )
 
 type publishCmd struct{}
@@ -33,6 +36,7 @@ func (cmd *publishCmd) Flags(fset *flag.FlagSet) {
 }
 
 func (cmd *publishCmd) Run(args []string) error {
+	var dtype, title string
 	switch len(args) {
 	case 0, 1:
 		fmt.Fprintf(os.Stderr, "Error: not enough arguments\n\n")
@@ -46,6 +50,13 @@ func (cmd *publishCmd) Run(args []string) error {
 		fmt.Fprintf(os.Stderr, "Error: too many arguments\n\n")
 		return flag.ErrHelp
 	}
+
+	root, ok := getRoot()
+	if !ok {
+		return noRootErr
+	}
+
+	fmt.Println(filepath.Join(root, "publish", dtype, slug.Make(title)))
 
 	return nil
 }

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 	"unsafe"
 
 	"github.com/gosimple/slug"
@@ -20,6 +22,28 @@ var standardFuncs = map[string]interface{}{
 	},
 
 	"slug": slug.Make,
+
+	"time": func(t interface{}) (time.Time, error) {
+		switch t := t.(type) {
+		case int:
+			return time.Unix(int64(t), 0), nil
+
+		case string:
+			for _, f := range []string{time.ANSIC, time.UnixDate, time.RubyDate, time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123, time.RFC1123Z, time.RFC3339, time.RFC3339Nano, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano} {
+				t, err := time.Parse(f, t)
+				if err != nil {
+					continue
+				}
+
+				return t, nil
+			}
+
+			return time.Time{}, errors.New("failed to parse time")
+
+		default:
+			return time.Time{}, fmt.Errorf("unexpected time type: %T", t)
+		}
+	},
 }
 
 var defaults = map[string]interface{}{
