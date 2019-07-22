@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -15,6 +16,10 @@ import (
 )
 
 var metaSplit = regexp.MustCompile(`^\+{5,}\n$`)
+
+var (
+	noRootErr = errors.New("couldn't find root of project")
+)
 
 func readMeta(r io.ReadCloser, v interface{}) (rem io.Reader, err error) {
 	br := bufio.NewReader(r)

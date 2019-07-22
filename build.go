@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type buildCmd struct {
@@ -27,19 +29,76 @@ tmpl directory.`
 }
 
 func (cmd *buildCmd) Flags(fset *flag.FlagSet) {
-	fset.StringVar(&cmd.output, "o", "build", "output directory")
+	fset.StringVar(&cmd.output, "o", "build", "output directory name relative to project root")
 }
 
 func (cmd *buildCmd) Run(args []string) error {
-	tmpl, err := loadTmpl()
+	root, ok := getRoot()
+	if !ok {
+		return noRootErr
+	}
+
+	publish := filepath.Join(root, "publish")
+	output := filepath.Join(root, cmd.output)
+
+	tmpl, err := loadTmpl(root)
 	if err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
 
-	err = tmpl["index.html"].tmpl.Execute(os.Stdout, map[string]string{
-		"Content": "This is a _test_.",
-	})
-	return err
+	var meta map[string]interface{}
+	return walk(publish, func(p string, fi os.FileInfo) error {
+		if fi.IsDir() {
+			return nil
+		}
 
-	//return build(tmpl)
+		in, err := os.Open(filepath.Join(publish, p))
+		if err != nil {
+			return fmt.Errorf("failed to open %q: %v", p, err)
+		}
+		defer in.Close()
+
+		meta = make(map[string]interface{}, len(meta))
+		inr, err := readMeta(in, &meta)
+		if err != nil {
+			return fmt.Errorf("failed to load meta from %q: %v", p, err)
+		}
+
+		tmplType, ok := meta["type"].(string)
+		if !ok {
+			return fmt.Errorf("no type in %q", p)
+		}
+
+		t, ok := tmpl[tmplType]
+		if !ok {
+			return fmt.Errorf("unknown type %q in %q", tmplType, p)
+		}
+
+		var content strings.Builder
+		err = t.tmpl.Execute(&content, map[string]interface{}{
+			"tmpl": t,
+			"meta": meta,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to execute %q: %v", tmplType, err)
+		}
+
+		err = os.MkdirAll(filepath.Join(output, filepath.Dir(p)), 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory for %q: %v", p, err)
+		}
+
+		op := strings.TrimSuffix(p, ".md") + filepath.Ext(tmplType)
+		out, err := os.OpenFile(
+			filepath.Join(output, op),
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+			0644,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create %q: %v", p, err)
+		}
+		defer out.Close()
+
+		return nil
+	})
 }

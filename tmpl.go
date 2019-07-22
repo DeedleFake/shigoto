@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,11 +18,7 @@ type tmpl struct {
 	Path string `yaml:"path"`
 }
 
-func loadTmpl() (map[string]tmpl, error) {
-	root, ok := getRoot()
-	if !ok {
-		return nil, errors.New("couldn't find root of project")
-	}
+func loadTmpl(root string) (map[string]tmpl, error) {
 	root = filepath.Join(root, "tmpl")
 
 	tmpls := make(map[string]tmpl)
