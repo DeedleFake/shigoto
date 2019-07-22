@@ -144,6 +144,7 @@ or other, similar sources.
 	commander.Register(&draftCmd{})
 	commander.Register(&publishCmd{})
 	commander.Register(&buildCmd{})
+	commander.Register(&cleanCmd{})
 
 	err := commander.Run(append([]string{filepath.Base(os.Args[0])}, os.Args[1:]...))
 	if err != nil {
