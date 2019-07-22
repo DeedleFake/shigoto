@@ -3,9 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type buildCmd struct {
@@ -38,67 +35,72 @@ func (cmd *buildCmd) Run(args []string) error {
 		return noRootErr
 	}
 
-	publish := filepath.Join(root, "publish")
-	output := filepath.Join(root, cmd.output)
+	//publish := filepath.Join(root, "publish")
+	//output := filepath.Join(root, cmd.output)
 
 	tmpl, err := loadTmpl(root)
 	if err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
 
-	var meta map[string]interface{}
-	return walk(publish, func(p string, fi os.FileInfo) error {
-		if fi.IsDir() {
-			return nil
-		}
+	for t, tmpl := range tmpl {
+		fmt.Printf("%v: %#v\n", t, tmpl)
+	}
+	return nil
 
-		in, err := os.Open(filepath.Join(publish, p))
-		if err != nil {
-			return fmt.Errorf("failed to open %q: %v", p, err)
-		}
-		defer in.Close()
+	//var meta map[string]interface{}
+	//return walk(publish, func(p string, fi os.FileInfo) error {
+	//	if fi.IsDir() {
+	//		return nil
+	//	}
 
-		meta = make(map[string]interface{}, len(meta))
-		inr, err := readMeta(in, &meta)
-		if err != nil {
-			return fmt.Errorf("failed to load meta from %q: %v", p, err)
-		}
+	//	in, err := os.Open(filepath.Join(publish, p))
+	//	if err != nil {
+	//		return fmt.Errorf("failed to open %q: %v", p, err)
+	//	}
+	//	defer in.Close()
 
-		tmplType, ok := meta["type"].(string)
-		if !ok {
-			return fmt.Errorf("no type in %q", p)
-		}
+	//	meta = make(map[string]interface{}, len(meta))
+	//	inr, err := readMeta(in, &meta)
+	//	if err != nil {
+	//		return fmt.Errorf("failed to load meta from %q: %v", p, err)
+	//	}
 
-		t, ok := tmpl[tmplType]
-		if !ok {
-			return fmt.Errorf("unknown type %q in %q", tmplType, p)
-		}
+	//	tmplType, ok := meta["type"].(string)
+	//	if !ok {
+	//		return fmt.Errorf("no type in %q", p)
+	//	}
 
-		var content strings.Builder
-		err = t.tmpl.Execute(&content, map[string]interface{}{
-			"tmpl": t,
-			"meta": meta,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to execute %q: %v", tmplType, err)
-		}
+	//	t, ok := tmpl[tmplType]
+	//	if !ok {
+	//		return fmt.Errorf("unknown type %q in %q", tmplType, p)
+	//	}
 
-		err = os.MkdirAll(filepath.Join(output, filepath.Dir(p)), 0755)
-		if err != nil {
-			return fmt.Errorf("failed to create directory for %q: %v", p, err)
-		}
+	//	var content strings.Builder
+	//	err = t.tmpl.Execute(&content, map[string]interface{}{
+	//		"tmpl": t,
+	//		"meta": meta,
+	//	})
+	//	if err != nil {
+	//		return fmt.Errorf("failed to execute %q: %v", tmplType, err)
+	//	}
 
-		op := strings.TrimSuffix(p, ".md") + filepath.Ext(tmplType)
-		out, err := os.OpenFile(
-			filepath.Join(output, op),
-			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-			0644,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create %q: %v", p, err)
-		}
-		defer out.Close()
+	//	err = os.MkdirAll(filepath.Join(output, filepath.Dir(p)), 0755)
+	//	if err != nil {
+	//		return fmt.Errorf("failed to create directory for %q: %v", p, err)
+	//	}
 
-		return nil
-	})
+	//	op := strings.TrimSuffix(p, ".md") + filepath.Ext(tmplType)
+	//	out, err := os.OpenFile(
+	//		filepath.Join(output, op),
+	//		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+	//		0644,
+	//	)
+	//	if err != nil {
+	//		return fmt.Errorf("failed to create %q: %v", p, err)
+	//	}
+	//	defer out.Close()
+
+	//	return nil
+	//})
 }

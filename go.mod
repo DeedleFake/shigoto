@@ -3,7 +3,7 @@ module github.com/DeedleFake/shigoto
 go 1.12
 
 require (
-	github.com/DeedleFake/sub v0.1.2
+	github.com/DeedleFake/sub v0.2.0
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible
