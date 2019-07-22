@@ -78,6 +78,7 @@ func (cmd *draftCmd) Run(args []string) error {
 	}
 
 	name, err := metaTmpl(sourceName, map[string]interface{}{
+		"Type":  dtype,
 		"Title": title,
 		"Tmpl":  t.meta,
 	})

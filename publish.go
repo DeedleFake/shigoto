@@ -1,12 +1,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"time"
 
-	"github.com/gosimple/slug"
+	"gopkg.in/yaml.v2"
 )
 
 type publishCmd struct{}
@@ -56,7 +59,97 @@ func (cmd *publishCmd) Run(args []string) error {
 		return noRootErr
 	}
 
-	fmt.Println(filepath.Join(root, "publish", dtype, slug.Make(title)))
+	tmpl, err := loadTmpl(root)
+	if err != nil {
+		return err
+	}
+
+	t, ok := tmpl[dtype]
+	if !ok {
+		return fmt.Errorf("unknown type %q", dtype)
+	}
+
+	sourceName, ok := t.get("sourceName").(string)
+	if !ok {
+		return errors.New("sourceName is not a string")
+	}
+
+	name, err := metaTmpl(sourceName, map[string]interface{}{
+		"Type":  dtype,
+		"Title": title,
+		"Tmpl":  t.meta,
+	})
+	if err != nil {
+		return err
+	}
+
+	buildPath, ok := t.get("buildPath").(string)
+	if !ok {
+		return errors.New("buildPath is not a string")
+	}
+
+	path, err := metaTmpl(buildPath, map[string]interface{}{
+		"Type":  dtype,
+		"Title": title,
+		"Tmpl":  t.meta,
+	})
+	if err != nil {
+		return err
+	}
+
+	infile := filepath.Join(root, "draft", name)
+	outfile := filepath.Join(root, "publish", path, name)
+
+	in, err := os.Open(infile)
+	if err != nil {
+		return fmt.Errorf("failed to open %q: %v", name, err)
+	}
+	defer in.Close()
+
+	var meta map[string]interface{}
+	inr, err := readMeta(in, &meta)
+	if err != nil {
+		return fmt.Errorf("failed to read metadata from %q: %v", name, err)
+	}
+	if _, ok := meta["time"]; !ok {
+		meta["time"] = time.Now().Format(time.RFC1123)
+	}
+
+	err = os.MkdirAll(filepath.Join(root, "publish", path), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create %q: %v", path, err)
+	}
+
+	out, err := os.OpenFile(outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create %q: %v", filepath.Join(path, name), err)
+	}
+	defer out.Close()
+
+	e := yaml.NewEncoder(out)
+	err = e.Encode(meta)
+	if err != nil {
+		return fmt.Errorf("failed to encode metadata: %v", err)
+	}
+	err = e.Close()
+	if err != nil {
+		return fmt.Errorf("failed to encode metadata: %v", err)
+	}
+
+	_, err = io.WriteString(out, "\n++++++++++\n")
+	if err != nil {
+		return fmt.Errorf("failed to write: %v", err)
+	}
+
+	_, err = io.Copy(out, inr)
+	if err != nil {
+		return fmt.Errorf("failed to write: %v", err)
+	}
+
+	err = os.Remove(infile)
+	if err != nil {
+		return fmt.Errorf("failed to remove draft: %v", err)
+	}
 
 	return nil
 }

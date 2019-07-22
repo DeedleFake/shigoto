@@ -15,6 +15,11 @@ import (
 	"github.com/russross/blackfriday"
 )
 
+var defaults = map[string]interface{}{
+	"sourceName": `{{.Title | slug}}.md`,
+	"buildPath":  `{{.Type | trimExt | slug}}`,
+}
+
 var standardFuncs = map[string]interface{}{
 	"markdown": func(str string) string {
 		out := blackfriday.Run([]byte(str))
@@ -44,10 +49,10 @@ var standardFuncs = map[string]interface{}{
 			return time.Time{}, fmt.Errorf("unexpected time type: %T", t)
 		}
 	},
-}
 
-var defaults = map[string]interface{}{
-	"sourceName": `{{.Title | slug}}.md`,
+	"trimExt": func(file string) string {
+		return strings.TrimSuffix(file, filepath.Ext(file))
+	},
 }
 
 type tmpl struct {
