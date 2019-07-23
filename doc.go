@@ -47,9 +47,11 @@
 // and the entire file is considered to be content.
 //
 // A file may contain any metadata that it wants to. The data
-// specified is available inside the template that is used to render
-// the file. Template files, however, have several special metadata
-// fields that have extra effects on how they are rendered:
+// specified is available inside the templates that are used to render
+// the file. Some files, however, have several special metadata fields
+// that have extra effects on how they are rendered.
+//
+// In templates, the following fields have an affect:
 //
 //    - inherit (string): This field specifies which metadata file
 //      this one inherits from. If this field is present, then the
@@ -68,6 +70,28 @@
 //    - buildPath (string): This field specifies the format for the
 //      path to an output file in the output directory. The default
 //      value is "{{.Title | slug}}/index.{{.Type | ext}}".
+//
+//    - range ({start: int, end: int, step: int}): This field
+//      instructs shigoto to produce a range of files from this
+//      template type. This is essentially the same as
+//      "for i := start; i < end; i += step { /* Produce file i. */ }".
+//      The default values are "{start: 0, end: 1, step: 1}". Note
+//      that the range for a template must produce at least one file
+//      for the template to do anything.
+//
+// In drafts, the following fields have an effect:
+//
+//    - type (string): This field specifies the template type of the
+//      draft. There is no default. This field is required.
+//
+//    - title (string): This field specifies the draft's title. This
+//      field is technically optional, but highly recommended. It is
+//      used in a number of places, including the creation of file
+//      names.
+//
+// Along with these, any of the fields specified above for templateu
+// files can be overriden inside of draft files with the exception of
+// "inherit".
 //
 // Template Execution
 //
@@ -88,6 +112,9 @@
 //
 //    - Meta (map): The metadata of the content involved in this
 //      execution.
+//
+//    - Range (map): Contains range information. Keys are "Start",
+//      "End", and "Current".
 //
 // Along with these, several functions are available:
 //
@@ -114,4 +141,8 @@
 //
 //    - tmpl (string, any -> string): Finds and executes the specified
 //      template from the tmpl directory using the given data.
+//
+//    - pages (string, int -> int): Returns the number of pages
+//      required to display all of the content of the given type with
+//      the given number of them per page.
 package main

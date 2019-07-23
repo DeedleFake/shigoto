@@ -89,6 +89,11 @@ func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
 
 			return (n / per) + extra, nil
 		},
+
+		// TODO: getByType(name string) ([]Content, error)
+		// TODO: filter(k, check, val string, c []Content) []Content
+		// TODO: slice(start, end int, c []Content) []Content
+		// TODO: pageSlice(start, end int, c []Content) []Content
 	}
 }
 
