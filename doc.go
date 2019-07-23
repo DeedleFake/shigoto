@@ -59,10 +59,12 @@
 //      entire execution. This allows a project to have a global
 //      template that provides the basic structure for the site with
 //      individual templates that handle specifics.
+//
 //    - sourceName (string): This field specifies the format to use
 //      for creating draft filenames using this template. The contents
 //      of this field are themselves executed as a template. The
 //      default value is "{{.Title | slug}}.md".
+//
 //    - buildPath (string): This field specifies the format to use for
 //      determining directories for output files that come from files
 //      using this template. For example, a value of
@@ -70,6 +72,7 @@
 //      subdirectories corresponding to the template name. The default
 //      value is an empty string, which means to put files in the root
 //      of the output directory.
+//
 //    - buildName (string): The same as buildPath, but for the output
 //      filename itself. The default value is
 //      "{{.Title | slug}}.{{.Type | ext}}".
@@ -84,10 +87,13 @@
 //
 //    - Type (string): The type of the template involved in this
 //      execution.
+//
 //    - Title (string): The title of the content involved. This can be
 //      an empty string in some cases.
+//
 //    - Tmpl (map): The metadata of the template involved in this
 //      execution.
+//
 //    - Meta (map): The metadata of the content involved in this
 //      execution.
 //
@@ -95,8 +101,10 @@
 //
 //    - markdown (string -> string): Runs its input through a Markdown
 //      engine and returns the output.
+//
 //    - slug (string -> string): Converts a string into a slug to make
 //      it more suitable for a URL or filename.
+//
 //    - time (string | int -> time.Time): Parses a time into a
 //      time.Time. If it is given an int, it is assumed that that is
 //      the number of seconds since the Unix epoch. If it is given a
@@ -105,10 +113,13 @@
 //      exception of time.Kitchen, in the order that they are
 //      specified in that package. If any succeeds then the result is
 //      returned.
+//
 //    - trimExt (string -> string): Trims the extension off of a
 //      filename.
+//
 //    - ext (string -> string): Returns the extension of a filename
 //      without the intervening dot.
+//
 //    - tmpl (string, any -> string): Finds and executes the specified
 //      template from the tmpl directory using the given data.
 package main
