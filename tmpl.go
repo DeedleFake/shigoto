@@ -12,7 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/gosimple/slug"
-	"github.com/russross/blackfriday"
+	"github.com/russross/blackfriday/v2"
 )
 
 var defaults = map[string]interface{}{

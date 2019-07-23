@@ -63,10 +63,10 @@ func (cmd *initCmd) Run(args []string) error {
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>{{.Tmpl.siteTitle}}</title>
+		<title>{{.Tmpl.siteTitle}} :: {{.Title}}</title>
 	</head>
 	<body>
-		<h2>{{.Meta.title}}</h2>
+		<h2>{{.Title}}</h2>
 		<main>
 			{{.Content}}
 		</main>
