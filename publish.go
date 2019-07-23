@@ -94,11 +94,12 @@ func (cmd *publishCmd) Run(args []string) error {
 		"Tmpl":  t.meta,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to construct buildPath: %v", err)
 	}
+	path = filepath.FromSlash(path)
 
 	infile := filepath.Join(root, "draft", name)
-	outfile := filepath.Join(root, "publish", path, name)
+	outfile := filepath.Join(root, "publish", filepath.Dir(path), name)
 
 	in, err := os.Open(infile)
 	if err != nil {
@@ -111,18 +112,24 @@ func (cmd *publishCmd) Run(args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read metadata from %q: %v", name, err)
 	}
+	if _, ok := meta["type"]; !ok {
+		meta["type"] = dtype
+	}
+	if _, ok := meta["title"]; !ok {
+		meta["title"] = title
+	}
 	if _, ok := meta["time"]; !ok {
 		meta["time"] = time.Now().Format(time.RFC1123)
 	}
 
-	err = os.MkdirAll(filepath.Join(root, "publish", path), 0755)
+	err = os.MkdirAll(filepath.Dir(outfile), 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create %q: %v", path, err)
 	}
 
 	out, err := os.OpenFile(outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to create %q: %v", filepath.Join(path, name), err)
+		return fmt.Errorf("failed to create %q: %v", filepath.Join(filepath.Dir(path), name), err)
 	}
 	defer out.Close()
 

@@ -118,29 +118,15 @@ func (cmd *buildCmd) Run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to construct buildPath for %q", p)
 		}
+		path = filepath.FromSlash(path)
 
-		buildName, ok := t.get("buildName").(string)
-		if !ok {
-			return fmt.Errorf("buildName is not a string in %q", dtype)
-		}
-
-		name, err := metaTmpl(buildName, map[string]interface{}{
-			"Type":  dtype,
-			"Title": title,
-			"Tmpl":  t.meta,
-			"Meta":  meta,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to construct buildName for %q", p)
-		}
-
-		err = os.MkdirAll(filepath.Join(output, path), 0755)
+		err = os.MkdirAll(filepath.Join(output, filepath.Dir(path)), 0755)
 		if err != nil {
 			return fmt.Errorf("failed to create directory for %q: %v", p, err)
 		}
 
 		out, err := os.OpenFile(
-			filepath.Join(output, path, name),
+			filepath.Join(output, path),
 			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 			0644,
 		)

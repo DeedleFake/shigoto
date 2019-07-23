@@ -15,13 +15,13 @@ import (
 	"github.com/go-yaml/yaml"
 )
 
-var metaSplit = regexp.MustCompile(`^\+{5,}\n$`)
+var metaSplit = regexp.MustCompile(`^\+{5,}\n?$`)
 
 var (
 	noRootErr = errors.New("couldn't find root of project")
 )
 
-func readMeta(r io.ReadCloser, v interface{}) (rem io.Reader, err error) {
+func readMeta(r io.Reader, v interface{}) (rem io.Reader, err error) {
 	br := bufio.NewReader(r)
 
 	var buf []byte
@@ -29,6 +29,10 @@ func readMeta(r io.ReadCloser, v interface{}) (rem io.Reader, err error) {
 		line, err := br.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
+				if metaSplit.Match(line) {
+					break
+				}
+
 				buf = append(buf, line...)
 				return bytes.NewBuffer(buf), nil
 			}

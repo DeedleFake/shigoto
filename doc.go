@@ -65,17 +65,9 @@
 //      of this field are themselves executed as a template. The
 //      default value is "{{.Title | slug}}.md".
 //
-//    - buildPath (string): This field specifies the format to use for
-//      determining directories for output files that come from files
-//      using this template. For example, a value of
-//      "{{.Type | noext | slug}}" means to put files in
-//      subdirectories corresponding to the template name. The default
-//      value is an empty string, which means to put files in the root
-//      of the output directory.
-//
-//    - buildName (string): The same as buildPath, but for the output
-//      filename itself. The default value is
-//      "{{.Title | slug}}.{{.Type | ext}}".
+//    - buildPath (string): This field specifies the format for the
+//      path to an output file in the output directory. The default
+//      value is "{{.Title | slug}}/index.{{.Type | ext}}".
 //
 // Template Execution
 //

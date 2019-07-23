@@ -17,8 +17,7 @@ import (
 
 var defaults = map[string]interface{}{
 	"sourceName": `{{.Title | slug}}.md`,
-	"buildPath":  ``,
-	"buildName":  `{{.Title | slug}}.{{.Type | ext}}`,
+	"buildPath":  `{{.Title | slug}}/index.{{.Type | ext}}`,
 }
 
 func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
