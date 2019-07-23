@@ -12,7 +12,7 @@ import (
 	"regexp"
 
 	"github.com/DeedleFake/sub"
-	"github.com/go-yaml/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 var metaSplit = regexp.MustCompile(`^\+{5,}\n?$`)

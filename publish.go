@@ -107,7 +107,7 @@ func (cmd *publishCmd) Run(args []string) error {
 	}
 	defer in.Close()
 
-	var meta map[string]interface{}
+	meta := make(map[string]interface{}, 3)
 	inr, err := readMeta(in, &meta)
 	if err != nil {
 		return fmt.Errorf("failed to read metadata from %q: %v", name, err)

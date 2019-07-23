@@ -1,7 +1,5 @@
 github.com/DeedleFake/sub v0.2.1 h1:zlNoADCGsByoT0X7knRi78PnhzN2EqtiSuh/EtYVyrk=
 github.com/DeedleFake/sub v0.2.1/go.mod h1:BsWPR7iErwaDAS3d2/FvV3Y/4uThhpVizO2lZXvH1S8=
-github.com/go-yaml/yaml v2.1.0+incompatible h1:RYi2hDdss1u4YE7GwixGzWwVo47T8UQwnTLB6vQiq+o=
-github.com/go-yaml/yaml v2.1.0+incompatible/go.mod h1:w2MrLa16VYP0jy6N7M5kHaCkaLENm+P+Tv+MfurjSw0=
 github.com/gosimple/slug v1.6.0 h1:jB/X2muqD2+ABdGF0YLJukfS1ppeTFfLxU757UE6K7c=
 github.com/gosimple/slug v1.6.0/go.mod h1:ER78kgg1Mv0NQGlXiDe57DpCyfbNywXXZ9mIorhxAf0=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=

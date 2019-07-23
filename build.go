@@ -64,7 +64,7 @@ func (cmd *buildCmd) Run(args []string) error {
 		}
 		defer in.Close()
 
-		var meta map[string]interface{}
+		meta := make(map[string]interface{})
 		inr, err := readMeta(in, &meta)
 		if err != nil {
 			return fmt.Errorf("failed to load meta from %q: %v", p, err)
