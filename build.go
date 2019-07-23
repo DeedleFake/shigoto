@@ -93,57 +93,89 @@ func (cmd *buildCmd) Run(args []string) error {
 			return fmt.Errorf("unknown type %q in %q", dtype, p)
 		}
 
-		var content strings.Builder
-		err = intmpl.Execute(&content, map[string]interface{}{
-			"Type":  dtype,
-			"Title": title,
-			"Tmpl":  t.meta,
-			"Meta":  meta,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to execute %q: %v", dtype, err)
-		}
-
-		buildPath, ok := t.get("buildPath").(string)
+		buildRange, ok := tmplGet("range", meta, t.meta).(map[interface{}]interface{})
 		if !ok {
-			return fmt.Errorf("buildPath is not a string in %q", dtype)
+			return fmt.Errorf("range is not an object in %q", p)
 		}
 
-		path, err := metaTmpl(buildPath, map[string]interface{}{
+		rng, err := rangeTmpl(buildRange, map[string]interface{}{
 			"Type":  dtype,
 			"Title": title,
 			"Tmpl":  t.meta,
 			"Meta":  meta,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to construct buildPath for %q", p)
-		}
-		path = filepath.FromSlash(path)
-
-		err = os.MkdirAll(filepath.Join(output, filepath.Dir(path)), 0755)
-		if err != nil {
-			return fmt.Errorf("failed to create directory for %q: %v", p, err)
+			return fmt.Errorf("failed to parse range in %q: %v", p, err)
 		}
 
-		out, err := os.OpenFile(
-			filepath.Join(output, path),
-			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-			0644,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create %q: %v", p, err)
-		}
-		defer out.Close()
+		for rngcur := rng["start"]; rngcur < rng["end"]; rngcur += rng["step"] {
+			var content strings.Builder
+			err = intmpl.Execute(&content, map[string]interface{}{
+				"Type":  dtype,
+				"Title": title,
+				"Tmpl":  t.meta,
+				"Meta":  meta,
+				"Range": map[string]interface{}{
+					"Start":   rng["start"],
+					"End":     rng["end"],
+					"Current": rngcur,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to execute %q: %v", dtype, err)
+			}
 
-		err = executeInherit(tmpl, t, out, map[string]interface{}{
-			"Type":    dtype,
-			"Title":   title,
-			"Tmpl":    t.meta,
-			"Meta":    meta,
-			"Content": content.String(),
-		})
-		if err != nil {
-			return fmt.Errorf("failed to execute %q: %v", p, err)
+			buildPath, ok := tmplGet("buildPath", meta, t.meta).(string)
+			if !ok {
+				return fmt.Errorf("buildPath is not a string in %q", dtype)
+			}
+
+			path, err := metaTmpl(buildPath, map[string]interface{}{
+				"Type":  dtype,
+				"Title": title,
+				"Tmpl":  t.meta,
+				"Meta":  meta,
+				"Range": map[string]interface{}{
+					"Start":   rng["start"],
+					"End":     rng["end"],
+					"Current": rngcur,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to construct buildPath for %q", p)
+			}
+			path = filepath.FromSlash(path)
+
+			err = os.MkdirAll(filepath.Join(output, filepath.Dir(path)), 0755)
+			if err != nil {
+				return fmt.Errorf("failed to create directory for %q: %v", p, err)
+			}
+
+			out, err := os.OpenFile(
+				filepath.Join(output, path),
+				os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+				0644,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create %q: %v", p, err)
+			}
+			defer out.Close()
+
+			err = executeInherit(tmpl, t, out, map[string]interface{}{
+				"Type":    dtype,
+				"Title":   title,
+				"Tmpl":    t.meta,
+				"Meta":    meta,
+				"Content": content.String(),
+				"Range": map[string]interface{}{
+					"Start":   rng["start"],
+					"End":     rng["end"],
+					"Current": rngcur,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to execute %q: %v", p, err)
+			}
 		}
 
 		return nil

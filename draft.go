@@ -72,7 +72,7 @@ func (cmd *draftCmd) Run(args []string) error {
 		return fmt.Errorf("unknown type %q", dtype)
 	}
 
-	sourceName, ok := t.get("sourceName").(string)
+	sourceName, ok := tmplGet("sourceName", t.meta).(string)
 	if !ok {
 		return errors.New("sourceName is not a string")
 	}

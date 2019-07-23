@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -18,6 +19,7 @@ import (
 var defaults = map[string]interface{}{
 	"sourceName": `{{.Title | slug}}.md`,
 	"buildPath":  `{{.Title | slug}}/index.{{.Type | ext}}`,
+	"range":      map[interface{}]interface{}(nil),
 }
 
 func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
@@ -123,12 +125,15 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 	return tmpls, err
 }
 
-func (t tmpl) get(name string) interface{} {
-	sourceName, ok := t.meta[name]
-	if !ok {
-		return defaults[name]
+func tmplGet(name string, meta ...map[string]interface{}) interface{} {
+	for _, meta := range meta {
+		v, ok := meta[name]
+		if ok {
+			return v
+		}
 	}
-	return sourceName
+
+	return defaults[name]
 }
 
 func metaTmpl(src string, data interface{}) (string, error) {
@@ -140,4 +145,37 @@ func metaTmpl(src string, data interface{}) (string, error) {
 	var r strings.Builder
 	err = snt.Execute(&r, data)
 	return r.String(), err
+}
+
+func rangeTmpl(rng map[interface{}]interface{}, data interface{}) (map[string]int, error) {
+	info := map[string]int{
+		"start": 0,
+		"end":   1,
+		"step":  1,
+	}
+
+	for k, v := range rng {
+		switch v := v.(type) {
+		case int:
+			info[k.(string)] = v
+
+		case string:
+			str, err := metaTmpl(v, data)
+			if err != nil {
+				return nil, err
+			}
+
+			n, err := strconv.ParseInt(str, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+
+			info[k.(string)] = int(n)
+
+		default:
+			return nil, fmt.Errorf("unexpected type %T", v)
+		}
+	}
+
+	return info, nil
 }
