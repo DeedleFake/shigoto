@@ -70,9 +70,9 @@ func (cmd *publishCmd) Run(args []string) error {
 	}
 
 	fakeRange := map[string]interface{}{
-		"Start":   0,
-		"End":     1,
-		"Current": 0,
+		"Start":   "range-start",
+		"End":     "range-end",
+		"Current": "range",
 	}
 
 	sourceName, ok := tmplGet("sourceName", t.meta).(string)

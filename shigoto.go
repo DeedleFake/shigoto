@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 
 	"github.com/DeedleFake/sub"
 	"gopkg.in/yaml.v2"
@@ -123,6 +124,62 @@ func walk(root string, f func(path string, fi os.FileInfo) error) error {
 		return nil
 	}
 	return inner(root)
+}
+
+var numTypeCache struct {
+	sync.RWMutex
+	c map[string]int
+}
+
+func getNumType(name string) (int, error) {
+	numTypeCache.RLock()
+	if numTypeCache.c != nil {
+		defer numTypeCache.RUnlock()
+		return numTypeCache.c[name], nil
+	}
+	numTypeCache.RUnlock()
+
+	numTypeCache.Lock()
+	if numTypeCache.c != nil {
+		numTypeCache.Unlock()
+		return getNumType(name)
+	}
+	defer numTypeCache.Unlock()
+
+	root, ok := getRoot()
+	if !ok {
+		return 0, noRootErr
+	}
+
+	counts := make(map[string]int)
+	err := walk(filepath.Join(root, "publish"), func(p string, fi os.FileInfo) error {
+		if fi.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(filepath.Join(root, "publish", p))
+		if err != nil {
+			return fmt.Errorf("failed to open %q: %v", p, err)
+		}
+		defer f.Close()
+
+		var meta map[string]interface{}
+		_, err = readMeta(f, &meta)
+		if err != nil {
+			return fmt.Errorf("failed to read metadata from %q: %v", p, err)
+		}
+
+		dtype, _ := meta["type"].(string)
+		counts[dtype]++
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	numTypeCache.c = counts
+	return counts[name], nil
 }
 
 var globalOptions struct {

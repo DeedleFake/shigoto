@@ -75,6 +75,20 @@ func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
 			err := t.tmpl.Execute(&out, data)
 			return out.String(), err
 		},
+
+		"pages": func(name string, per int) (int, error) {
+			n, err := getNumType(name)
+			if err != nil {
+				return 0, err
+			}
+
+			var extra int
+			if n%per != 0 {
+				extra = 1
+			}
+
+			return (n / per) + extra, nil
+		},
 	}
 }
 
