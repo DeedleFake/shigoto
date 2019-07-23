@@ -109,17 +109,19 @@ func (cmd *buildCmd) Run(args []string) error {
 		}
 
 		for rngcur := rng["start"]; rngcur < rng["end"]; rngcur += rng["step"] {
+			rngmap := map[string]interface{}{
+				"Start":   rng["start"] + 1,
+				"End":     rng["end"],
+				"Current": rngcur + 1,
+			}
+
 			var content strings.Builder
 			err = intmpl.Execute(&content, map[string]interface{}{
 				"Type":  dtype,
 				"Title": title,
 				"Tmpl":  t.meta,
 				"Meta":  meta,
-				"Range": map[string]interface{}{
-					"Start":   rng["start"],
-					"End":     rng["end"],
-					"Current": rngcur,
-				},
+				"Range": rngmap,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to execute %q: %v", dtype, err)
@@ -135,14 +137,10 @@ func (cmd *buildCmd) Run(args []string) error {
 				"Title": title,
 				"Tmpl":  t.meta,
 				"Meta":  meta,
-				"Range": map[string]interface{}{
-					"Start":   rng["start"],
-					"End":     rng["end"],
-					"Current": rngcur,
-				},
+				"Range": rngmap,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to construct buildPath for %q", p)
+				return fmt.Errorf("failed to construct buildPath for %q: %v", p, err)
 			}
 			path = filepath.FromSlash(path)
 
@@ -167,11 +165,7 @@ func (cmd *buildCmd) Run(args []string) error {
 				"Tmpl":    t.meta,
 				"Meta":    meta,
 				"Content": content.String(),
-				"Range": map[string]interface{}{
-					"Start":   rng["start"],
-					"End":     rng["end"],
-					"Current": rngcur,
-				},
+				"Range":   rngmap,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to execute %q: %v", p, err)
@@ -210,7 +204,7 @@ func copyStatic(out, in string) error {
 }
 
 func executeInherit(tmpl map[string]tmpl, t tmpl, out io.Writer, data map[string]interface{}) error {
-	inherit, ok := t.meta["inherit"].(string)
+	inherit, ok := tmplGet("inherit", t.meta).(string)
 	if !ok {
 		return t.tmpl.Execute(out, data)
 	}
