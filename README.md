@@ -1,6 +1,9 @@
 shigoto
 =======
 
+[![GoDoc](http://www.godoc.org/github.com/DeedleFake/shigoto?status.svg)](http://www.godoc.org/github.com/DeedleFake/shigoto)
+[![Go Report Card](https://goreportcard.com/badge/github.com/DeedleFake/shigoto)](https://goreportcard.com/report/github.com/DeedleFake/shigoto)
+
 shigoto is a very simple static site generator. Hugo is great, but sometimes Hugo is just complete overkill. This is for those situations.
 
 Features
