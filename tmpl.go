@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -19,7 +18,7 @@ import (
 var defaults = map[string]interface{}{
 	"sourceName": `{{.Title | slug}}.md`,
 	"buildPath":  `{{.Title | slug}}/index.{{.Type | ext}}`,
-	"range":      map[interface{}]interface{}(nil),
+	"pages":      pagesInfo{Per: 5},
 }
 
 func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
@@ -74,20 +73,6 @@ func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
 			var out strings.Builder
 			err := t.tmpl.Execute(&out, data)
 			return out.String(), err
-		},
-
-		"pages": func(name string, per int) (int, error) {
-			n, err := getNumType(name)
-			if err != nil {
-				return 0, err
-			}
-
-			var extra int
-			if n%per != 0 {
-				extra = 1
-			}
-
-			return (n / per) + extra, nil
 		},
 
 		// TODO: getByType(name string) ([]Content, error)
@@ -148,6 +133,9 @@ func tmplGet(name string, meta ...map[string]interface{}) interface{} {
 	for _, meta := range meta {
 		v, ok := meta[name]
 		if ok {
+			if fr, ok := defaults[name].(fromRawer); ok {
+				return fr.fromRaw(v)
+			}
 			return v
 		}
 	}
@@ -166,35 +154,27 @@ func metaTmpl(src string, data interface{}) (string, error) {
 	return r.String(), err
 }
 
-func rangeTmpl(rng map[interface{}]interface{}, data interface{}) (map[string]int, error) {
-	info := map[string]int{
-		"start": 0,
-		"end":   1,
-		"step":  1,
+type fromRawer interface {
+	fromRaw(raw interface{}) interface{}
+}
+
+type pagesInfo struct {
+	Tmpl string `yaml:"tmpl"`
+	Per  int    `yaml:"per"`
+}
+
+func (info pagesInfo) fromRaw(raw interface{}) interface{} {
+	rawmap, ok := raw.(map[interface{}]interface{})
+	if !ok {
+		return nil
 	}
 
-	for k, v := range rng {
-		switch v := v.(type) {
-		case int:
-			info[k.(string)] = v
-
-		case string:
-			str, err := metaTmpl(v, data)
-			if err != nil {
-				return nil, err
-			}
-
-			n, err := strconv.ParseInt(str, 10, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			info[k.(string)] = int(n)
-
-		default:
-			return nil, fmt.Errorf("unexpected type %T", v)
-		}
+	if tmpl, ok := rawmap["tmpl"].(string); ok {
+		info.Tmpl = tmpl
+	}
+	if per, ok := rawmap["per"].(int); ok {
+		info.Per = per
 	}
 
-	return info, nil
+	return info
 }

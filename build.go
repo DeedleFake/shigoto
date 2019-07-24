@@ -93,26 +93,40 @@ func (cmd *buildCmd) Run(args []string) error {
 			return fmt.Errorf("unknown type %q in %q", dtype, p)
 		}
 
-		buildRange, ok := tmplGet("range", meta, t.meta).(map[interface{}]interface{})
+		pages, ok := tmplGet("pages", meta, t.meta).(pagesInfo)
 		if !ok {
-			return fmt.Errorf("range is not an object in %q", p)
+			return fmt.Errorf("pages is not an object in %q", p)
 		}
 
-		rng, err := rangeTmpl(buildRange, map[string]interface{}{
-			"Type":  dtype,
-			"Title": title,
-			"Tmpl":  t.meta,
-			"Meta":  meta,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to parse range in %q: %v", p, err)
+		numPages := 1
+
+		var numType int
+		if pages.Tmpl != "" {
+			num, err := getNumType(pages.Tmpl)
+			if err != nil {
+				return fmt.Errorf("failed to get number of pages for %q", pages.Tmpl)
+			}
+			numType = num
+
+			var extra int
+			if numType%pages.Per != 0 {
+				extra = 1
+			}
+
+			numPages = (numType / pages.Per) + extra
 		}
 
-		for rngcur := rng["start"]; rngcur < rng["end"]; rngcur += rng["step"] {
-			rngmap := map[string]interface{}{
-				"Start":   rng["start"] + 1,
-				"End":     rng["end"],
-				"Current": rngcur + 1,
+		for currentPage := 1; currentPage <= numPages; currentPage++ {
+			pageEnd := currentPage * pages.Per
+			if pageEnd > numType {
+				pageEnd = numType
+			}
+
+			pageMap := map[string]interface{}{
+				"Last":      numPages,
+				"Current":   currentPage,
+				"PageStart": (currentPage - 1) * pages.Per,
+				"PageEnd":   pageEnd,
 			}
 
 			var content strings.Builder
@@ -121,7 +135,7 @@ func (cmd *buildCmd) Run(args []string) error {
 				"Title": title,
 				"Tmpl":  t.meta,
 				"Meta":  meta,
-				"Range": rngmap,
+				"Pages": pageMap,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to execute %q: %v", dtype, err)
@@ -129,7 +143,7 @@ func (cmd *buildCmd) Run(args []string) error {
 
 			buildPath, ok := tmplGet("buildPath", meta, t.meta).(string)
 			if !ok {
-				return fmt.Errorf("buildPath is not a string in %q", dtype)
+				return fmt.Errorf("buildPath is not a string in %q", p)
 			}
 
 			path, err := metaTmpl(buildPath, map[string]interface{}{
@@ -137,7 +151,7 @@ func (cmd *buildCmd) Run(args []string) error {
 				"Title": title,
 				"Tmpl":  t.meta,
 				"Meta":  meta,
-				"Range": rngmap,
+				"Pages": pageMap,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to construct buildPath for %q: %v", p, err)
@@ -165,7 +179,7 @@ func (cmd *buildCmd) Run(args []string) error {
 				"Tmpl":    t.meta,
 				"Meta":    meta,
 				"Content": content.String(),
-				"Range":   rngmap,
+				"Pages":   pageMap,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to execute %q: %v", p, err)

@@ -69,10 +69,9 @@ func (cmd *publishCmd) Run(args []string) error {
 		return fmt.Errorf("unknown type %q", dtype)
 	}
 
-	fakeRange := map[string]interface{}{
-		"Start":   "range-start",
-		"End":     "range-end",
-		"Current": "range",
+	fakePages := map[string]interface{}{
+		"Last":    "last-page",
+		"Current": "pages",
 	}
 
 	sourceName, ok := tmplGet("sourceName", t.meta).(string)
@@ -84,7 +83,7 @@ func (cmd *publishCmd) Run(args []string) error {
 		"Type":  dtype,
 		"Title": title,
 		"Tmpl":  t.meta,
-		"Range": fakeRange,
+		"Pages": fakePages,
 	})
 	if err != nil {
 		return err
@@ -99,7 +98,7 @@ func (cmd *publishCmd) Run(args []string) error {
 		"Type":  dtype,
 		"Title": title,
 		"Tmpl":  t.meta,
-		"Range": fakeRange,
+		"Pages": fakePages,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to construct buildPath: %v", err)

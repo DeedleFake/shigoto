@@ -71,13 +71,15 @@
 //      path to an output file in the output directory. The default
 //      value is "{{.Title | slug}}/index.{{.Type | ext}}".
 //
-//    - range ({start: int, end: int, step: int}): This field
-//      instructs shigoto to produce a range of files from this
-//      template type. This is essentially the same as
-//      "for i := start; i < end; i += step { /* Produce file i. */ }".
-//      The default values are "{start: 0, end: 1, step: 1}". Note
-//      that the range for a template must produce at least one file
-//      for the template to do anything.
+//    - pages ({tmpl: string, per: int}): This field indicates that
+//      the current template should be structured into pages for
+//      another template. The tmpl field specifies which template type
+//      to create pages for, while the per field specifies how many of
+//      the template type should be considered to be a new page. If
+//      tmpl is blank, don't create pages. In other words, if there
+//      are, let's say, 27 pieces of content of type "post.html", and
+//      you want to create pages that list those with five per page,
+//      use "{tmpl: post.html, per: 5}".
 //
 // In drafts, the following fields have an effect:
 //
@@ -113,8 +115,12 @@
 //    - Meta (map): The metadata of the content involved in this
 //      execution.
 //
-//    - Range (map): Contains range information. Keys are "Start",
-//      "End", and "Current".
+//    - Pages (map): Contains page creation information. Keys are
+//          - "Last": Number of the last. Same thing as the total
+//            number of pages.
+//          - "Current": Number of the current page.
+//          - "PageStart": Index of the first element on this page.
+//          - "PageEnd": Index of the last element on this page.
 //
 // Along with these, several functions are available:
 //
@@ -141,8 +147,4 @@
 //
 //    - tmpl (string, any -> string): Finds and executes the specified
 //      template from the tmpl directory using the given data.
-//
-//    - pages (string, int -> int): Returns the number of pages
-//      required to display all of the content of the given type with
-//      the given number of them per page.
 package main
