@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/DeedleFake/shigoto"
+	"github.com/DeedleFake/shigoto/internal/common"
 )
 
 type buildCmd struct {
@@ -35,7 +38,7 @@ func (cmd *buildCmd) Flags(fset *flag.FlagSet) {
 }
 
 func (cmd *buildCmd) Run(args []string) error {
-	root, ok := getRoot()
+	root, ok := shigoto.FindRoot(globalOptions.root)
 	if !ok {
 		return noRootErr
 	}
@@ -43,7 +46,7 @@ func (cmd *buildCmd) Run(args []string) error {
 	publish := filepath.Join(root, "publish")
 	output := filepath.Join(root, cmd.output)
 
-	tmpl, err := loadTmpl(root)
+	tmpl, err := shigoto.LoadTmpl(filepath.Join(root, "tmpl"))
 	if err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
@@ -53,7 +56,7 @@ func (cmd *buildCmd) Run(args []string) error {
 		return err
 	}
 
-	return walk(publish, func(p string, fi os.FileInfo) error {
+	return common.Walk(publish, func(p string, fi os.FileInfo) error {
 		if fi.IsDir() {
 			return nil
 		}
@@ -65,7 +68,7 @@ func (cmd *buildCmd) Run(args []string) error {
 		defer in.Close()
 
 		meta := make(map[string]interface{})
-		inr, err := readMeta(in, &meta)
+		inr, err := shigoto.ReadMeta(in, &meta)
 		if err != nil {
 			return fmt.Errorf("failed to load meta from %q: %v", p, err)
 		}
@@ -76,7 +79,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			return fmt.Errorf("failed to read %q: %v", p, err)
 		}
 
-		intmpl, err := template.New(p).Funcs(standardFuncs(tmpl)).Parse(instr.String())
+		intmpl, err := template.New(p).Funcs(shigoto.StandardFuncs(tmpl)).Parse(instr.String())
 		if err != nil {
 			return fmt.Errorf("failed to parse %q: %v", p, err)
 		}
@@ -93,7 +96,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			return fmt.Errorf("unknown type %q in %q", dtype, p)
 		}
 
-		pages, ok := tmplGet("pages", meta, t.meta).(pagesInfo)
+		pages, ok := tmplGet("pages", meta, t.Meta).(pagesInfo)
 		if !ok {
 			return fmt.Errorf("pages is not an object in %q", p)
 		}
@@ -102,7 +105,7 @@ func (cmd *buildCmd) Run(args []string) error {
 
 		var numType int
 		if pages.Tmpl != "" {
-			num, err := getNumType(pages.Tmpl)
+			num, err := shigoto.GetNumType(root, pages.Tmpl)
 			if err != nil {
 				return fmt.Errorf("failed to get number of pages for %q", pages.Tmpl)
 			}
@@ -133,7 +136,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			err = intmpl.Execute(&content, map[string]interface{}{
 				"Type":  dtype,
 				"Title": title,
-				"Tmpl":  t.meta,
+				"Tmpl":  t.Meta,
 				"Meta":  meta,
 				"Pages": pageMap,
 			})
@@ -141,7 +144,7 @@ func (cmd *buildCmd) Run(args []string) error {
 				return fmt.Errorf("failed to execute %q: %v", dtype, err)
 			}
 
-			buildPath, ok := tmplGet("buildPath", meta, t.meta).(string)
+			buildPath, ok := tmplGet("buildPath", meta, t.Meta).(string)
 			if !ok {
 				return fmt.Errorf("buildPath is not a string in %q", p)
 			}
@@ -149,7 +152,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			path, err := metaTmpl(buildPath, map[string]interface{}{
 				"Type":  dtype,
 				"Title": title,
-				"Tmpl":  t.meta,
+				"Tmpl":  t.Meta,
 				"Meta":  meta,
 				"Pages": pageMap,
 			})
@@ -176,7 +179,7 @@ func (cmd *buildCmd) Run(args []string) error {
 			err = executeInherit(tmpl, t, out, map[string]interface{}{
 				"Type":    dtype,
 				"Title":   title,
-				"Tmpl":    t.meta,
+				"Tmpl":    t.Meta,
 				"Meta":    meta,
 				"Content": content.String(),
 				"Pages":   pageMap,
@@ -193,11 +196,10 @@ func (cmd *buildCmd) Run(args []string) error {
 func copyStatic(out, in string) error {
 	_, err := os.Stat(in)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "No static directory found.")
 		return nil
 	}
 
-	return walk(in, func(p string, fi os.FileInfo) error {
+	return common.Walk(in, func(p string, fi os.FileInfo) error {
 		err := os.MkdirAll(filepath.Join(out, filepath.Dir(p)), 0755)
 		if err != nil {
 			return fmt.Errorf("failed to create directory for %q: %v", p, err)
@@ -217,10 +219,10 @@ func copyStatic(out, in string) error {
 	})
 }
 
-func executeInherit(tmpl map[string]tmpl, t tmpl, out io.Writer, data map[string]interface{}) error {
-	inherit, ok := tmplGet("inherit", t.meta).(string)
+func executeInherit(tmpl map[string]shigoto.Tmpl, t shigoto.Tmpl, out io.Writer, data map[string]interface{}) error {
+	inherit, ok := tmplGet("inherit", t.Meta).(string)
 	if !ok {
-		return t.tmpl.Execute(out, data)
+		return t.Tmpl.Execute(out, data)
 	}
 
 	next, ok := tmpl[inherit]
@@ -229,7 +231,7 @@ func executeInherit(tmpl map[string]tmpl, t tmpl, out io.Writer, data map[string
 	}
 
 	var content strings.Builder
-	err := t.tmpl.Execute(&content, data)
+	err := t.Tmpl.Execute(&content, data)
 	if err != nil {
 		return err
 	}
@@ -238,7 +240,7 @@ func executeInherit(tmpl map[string]tmpl, t tmpl, out io.Writer, data map[string
 	for k, v := range data {
 		nextData[k] = v
 	}
-	for k, v := range next.meta {
+	for k, v := range next.Meta {
 		nextData["Tmpl"].(map[string]interface{})[k] = v
 	}
 	nextData["Content"] = content.String()

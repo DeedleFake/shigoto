@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/DeedleFake/shigoto"
 )
 
 type cleanCmd struct {
@@ -38,7 +40,7 @@ func (cmd *cleanCmd) Flags(fset *flag.FlagSet) {
 }
 
 func (cmd *cleanCmd) Run(args []string) error {
-	root, ok := getRoot()
+	root, ok := shigoto.FindRoot(globalOptions.root)
 	if !ok {
 		return noRootErr
 	}

@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/DeedleFake/shigoto"
 )
 
 type draftCmd struct{}
@@ -57,12 +59,12 @@ func (cmd *draftCmd) Run(args []string) error {
 		return flag.ErrHelp
 	}
 
-	root, ok := getRoot()
+	root, ok := shigoto.FindRoot(globalOptions.root)
 	if !ok {
 		return noRootErr
 	}
 
-	tmpl, err := loadTmpl(root)
+	tmpl, err := shigoto.LoadTmpl(root)
 	if err != nil {
 		return err
 	}
@@ -72,7 +74,7 @@ func (cmd *draftCmd) Run(args []string) error {
 		return fmt.Errorf("unknown type %q", dtype)
 	}
 
-	sourceName, ok := tmplGet("sourceName", t.meta).(string)
+	sourceName, ok := tmplGet("sourceName", t.Meta).(string)
 	if !ok {
 		return errors.New("sourceName is not a string")
 	}
@@ -80,7 +82,7 @@ func (cmd *draftCmd) Run(args []string) error {
 	name, err := metaTmpl(sourceName, map[string]interface{}{
 		"Type":  dtype,
 		"Title": title,
-		"Tmpl":  t.meta,
+		"Tmpl":  t.Meta,
 	})
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package main
+package shigoto
 
 import (
 	"errors"
@@ -11,17 +11,12 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/DeedleFake/shigoto/internal/common"
 	"github.com/gosimple/slug"
 	"github.com/russross/blackfriday/v2"
 )
 
-var defaults = map[string]interface{}{
-	"sourceName": `{{.Title | slug}}.md`,
-	"buildPath":  `{{.Title | slug}}/index.{{.Type | ext}}`,
-	"pages":      pagesInfo{Per: 5},
-}
-
-func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
+func StandardFuncs(tmpls map[string]Tmpl) template.FuncMap {
 	return template.FuncMap{
 		"markdown": func(str string) string {
 			out := blackfriday.Run([]byte(str))
@@ -71,7 +66,7 @@ func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
 			}
 
 			var out strings.Builder
-			err := t.tmpl.Execute(&out, data)
+			err := t.Tmpl.Execute(&out, data)
 			return out.String(), err
 		},
 
@@ -82,16 +77,14 @@ func standardFuncs(tmpls map[string]tmpl) template.FuncMap {
 	}
 }
 
-type tmpl struct {
-	tmpl *template.Template
-	meta map[string]interface{}
+type Tmpl struct {
+	Meta map[string]interface{}
+	Tmpl *template.Template
 }
 
-func loadTmpl(root string) (map[string]tmpl, error) {
-	root = filepath.Join(root, "tmpl")
-
-	tmpls := make(map[string]tmpl)
-	err := walk(root, func(path string, fi os.FileInfo) error {
+func LoadTmpl(root string) (map[string]Tmpl, error) {
+	tmpls := make(map[string]Tmpl)
+	err := common.Walk(root, func(path string, fi os.FileInfo) error {
 		if fi.IsDir() {
 			return nil
 		}
@@ -102,8 +95,8 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 		}
 		defer f.Close()
 
-		var t tmpl
-		rem, err := readMeta(f, &t.meta)
+		var t Tmpl
+		rem, err := ReadMeta(f, &t.Meta)
 		if err != nil {
 			return fmt.Errorf("failed to read meta from %q: %v", path, err)
 		}
@@ -114,11 +107,10 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 			return fmt.Errorf("failed to read %q: %v\n", path, err)
 		}
 
-		t.tmpl = template.New(path)
-		t.tmpl.Funcs(standardFuncs(tmpls))
-		t.tmpl.Funcs(map[string]interface{}{})
+		t.Tmpl = template.New(path)
+		t.Tmpl.Funcs(StandardFuncs(tmpls))
 
-		t.tmpl, err = t.tmpl.Parse(buf.String())
+		t.Tmpl, err = t.Tmpl.Parse(buf.String())
 		if err != nil {
 			return fmt.Errorf("failed to parse %q: %v", path, err)
 		}
@@ -127,54 +119,4 @@ func loadTmpl(root string) (map[string]tmpl, error) {
 		return nil
 	})
 	return tmpls, err
-}
-
-func tmplGet(name string, meta ...map[string]interface{}) interface{} {
-	for _, meta := range meta {
-		v, ok := meta[name]
-		if ok {
-			if fr, ok := defaults[name].(fromRawer); ok {
-				return fr.fromRaw(v)
-			}
-			return v
-		}
-	}
-
-	return defaults[name]
-}
-
-func metaTmpl(src string, data interface{}) (string, error) {
-	snt, err := template.New(src).Funcs(standardFuncs(nil)).Parse(src)
-	if err != nil {
-		return "", err
-	}
-
-	var r strings.Builder
-	err = snt.Execute(&r, data)
-	return r.String(), err
-}
-
-type fromRawer interface {
-	fromRaw(raw interface{}) interface{}
-}
-
-type pagesInfo struct {
-	Tmpl string `yaml:"tmpl"`
-	Per  int    `yaml:"per"`
-}
-
-func (info pagesInfo) fromRaw(raw interface{}) interface{} {
-	rawmap, ok := raw.(map[interface{}]interface{})
-	if !ok {
-		return nil
-	}
-
-	if tmpl, ok := rawmap["tmpl"].(string); ok {
-		info.Tmpl = tmpl
-	}
-	if per, ok := rawmap["per"].(int); ok {
-		info.Per = per
-	}
-
-	return info
 }

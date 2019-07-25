@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/DeedleFake/shigoto"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,12 +55,12 @@ func (cmd *publishCmd) Run(args []string) error {
 		return flag.ErrHelp
 	}
 
-	root, ok := getRoot()
+	root, ok := shigoto.FindRoot(globalOptions.root)
 	if !ok {
 		return noRootErr
 	}
 
-	tmpl, err := loadTmpl(root)
+	tmpl, err := shigoto.LoadTmpl(root)
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func (cmd *publishCmd) Run(args []string) error {
 		"Current": "pages",
 	}
 
-	sourceName, ok := tmplGet("sourceName", t.meta).(string)
+	sourceName, ok := tmplGet("sourceName", t.Meta).(string)
 	if !ok {
 		return errors.New("sourceName is not a string")
 	}
@@ -82,14 +83,14 @@ func (cmd *publishCmd) Run(args []string) error {
 	name, err := metaTmpl(sourceName, map[string]interface{}{
 		"Type":  dtype,
 		"Title": title,
-		"Tmpl":  t.meta,
+		"Tmpl":  t.Meta,
 		"Pages": fakePages,
 	})
 	if err != nil {
 		return err
 	}
 
-	buildPath, ok := tmplGet("buildPath", t.meta).(string)
+	buildPath, ok := tmplGet("buildPath", t.Meta).(string)
 	if !ok {
 		return errors.New("buildPath is not a string")
 	}
@@ -97,7 +98,7 @@ func (cmd *publishCmd) Run(args []string) error {
 	path, err := metaTmpl(buildPath, map[string]interface{}{
 		"Type":  dtype,
 		"Title": title,
-		"Tmpl":  t.meta,
+		"Tmpl":  t.Meta,
 		"Pages": fakePages,
 	})
 	if err != nil {
@@ -115,7 +116,7 @@ func (cmd *publishCmd) Run(args []string) error {
 	defer in.Close()
 
 	meta := make(map[string]interface{}, 3)
-	inr, err := readMeta(in, &meta)
+	inr, err := shigoto.ReadMeta(in, &meta)
 	if err != nil {
 		return fmt.Errorf("failed to read metadata from %q: %v", name, err)
 	}
